@@ -1,18 +1,18 @@
 # rdc-leitbild
 
-Interactive Leitbild highlight for rettungsdienst-cuxland.de: values as floating bubbles, click one → it moves to the center, text appears beside it.
+Interactive Leitbild highlight for rettungsdienst-cuxland.de: values as bubbles around the vision. Click one → it moves to the center, its text appears beside it.
 
 ```sh
-npm install
-npm run dev   # http://localhost:5173
+python3 -m http.server 5199   # http://localhost:5199
 ```
 
-## Embed (WordPress / WPBakery "Raw HTML")
+No build step. `rdc-leitbild.js` is the whole component.
 
-Upload `src/rdc-leitbild.js` and the photos, then:
+## Embed (WordPress)
+
+Load `rdc-leitbild.js` as a module script on the page, then put the content in a WPBakery "Raw HTML" block:
 
 ```html
-<script type="module" src="/wp-content/uploads/rdc-leitbild.js"></script>
 <rdc-leitbild>
   <article>
     <h3>Unsere Vision</h3>
@@ -28,7 +28,7 @@ Upload `src/rdc-leitbild.js` and the photos, then:
 </rdc-leitbild>
 ```
 
-- First `<article>` without `<img>` = center bubble on load.
+- First `<article>` starts in the center.
 - `<h3>` = bubble title. Long words: add `&shy;` where they may break.
 - Focal point: `style="object-position: 40% 50%"` on the `<img>`.
 - Without JS the articles render as plain text + images.

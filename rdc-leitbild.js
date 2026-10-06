@@ -1,5 +1,5 @@
-// <rdc-leitbild>: each child <article> becomes a bubble + panel.
-// First article without <img> is the start (center) bubble.
+// <rdc-leitbild>: each child <article> becomes a bubble + text panel.
+// First article starts in the center.
 const css = `
 :host {
   --teal: #004055;
@@ -47,27 +47,24 @@ const css = `
   -webkit-tap-highlight-color: transparent;
 }
 .bubble:hover { scale: .71; }
-.bubble[aria-selected="true"] { --r: 0cqi; scale: 1; z-index: 1; cursor: default; }
+.bubble[aria-current="true"] { --r: 0cqi; scale: 1; z-index: 1; cursor: default; }
 .bubble:focus-visible { outline: none; }
 .bubble:focus-visible .float { box-shadow: 0 0 0 .5cqi #fff, 0 0 0 1.4cqi var(--teal); }
 
 .float {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
   overflow: hidden;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 25%, #0d6680, var(--teal) 70%);
   box-shadow: 0 0 0 .9cqi #fff, 0 2cqi 5cqi rgb(0 64 85 / .3);
   transition: box-shadow .5s;
-  animation: bob 7s ease-in-out calc(var(--i) * -1.7s) infinite alternate;
+  animation: pop .9s var(--ease) calc(var(--i) * 90ms) backwards paused;
 }
-[aria-selected="true"] .float { box-shadow: 0 0 0 .9cqi var(--yellow), 0 3cqi 7cqi rgb(0 64 85 / .35); }
-@keyframes bob {
-  0% { transform: translate(-1.5%, -2.5%); }
-  50% { transform: translate(2%, .5%); }
-  100% { transform: translate(-.5%, 2.5%); }
+.in .float { animation-play-state: running; }
+[aria-current="true"] .float { box-shadow: 0 0 0 .9cqi var(--yellow), 0 3cqi 7cqi rgb(0 64 85 / .35); }
+@keyframes pop {
+  from { transform: scale(0); opacity: 0; }
 }
 
 img {
@@ -84,7 +81,7 @@ img + .title::before {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: rgb(0 64 85 / .55);
+  background: rgb(0 64 85 / .7);
   transition: opacity .6s;
 }
 .title {
@@ -92,18 +89,15 @@ img + .title::before {
   isolation: isolate;
   display: grid;
   place-items: center;
-  width: 100%;
   height: 100%;
-  box-sizing: border-box;
-  padding: 10%;
+  padding: 0 7%;
   color: #fff;
-  font: 700 max(17px, 5.4cqi)/1.05 var(--title-font);
+  font: 700 max(18px, 5.4cqi)/1.05 var(--title-font);
   text-align: center;
-  text-shadow: 0 1px 6px rgb(0 0 0 / .3);
   transition: opacity .5s;
 }
-[aria-selected="true"] img + .title,
-[aria-selected="true"] img + .title::before { opacity: 0; }
+[aria-current="true"] img + .title,
+[aria-current="true"] img + .title::before { opacity: 0; }
 
 .panel { display: grid; }
 .panel > section {
@@ -146,58 +140,44 @@ class RdcLeitbild extends HTMLElement {
     if (this.shadowRoot) return;
     const articles = [...this.querySelectorAll(":scope > article")];
     const root = this.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>${css}</style><div class="wrap"><div class="stage" role="tablist" aria-label="Leitbild"></div><div class="panel"></div></div>`;
+    root.innerHTML = `<style>${css}</style><div class="wrap"><div class="stage"></div><div class="panel" aria-live="polite"></div></div>`;
     const [stage, panel] = root.querySelector(".wrap").children;
-    let slot = 1;
 
-    this.tabs = articles.map((article, i) => {
+    this.bubbles = articles.map((article, i) => {
       const img = article.querySelector("img");
-      const title = article.querySelector("h3")?.textContent ?? "";
-      const tab = document.createElement("button");
-      tab.className = "bubble";
-      tab.id = `tab-${i}`;
-      tab.role = "tab";
-      tab.lang = "de";
-      tab.setAttribute("aria-controls", `panel-${i}`);
-      tab.style.setProperty("--i", i);
-      tab.style.setProperty("--slot", i === 0 ? 0 : slot++);
-      tab.innerHTML = `<span class="float"></span>`;
-      if (img) tab.firstChild.append(Object.assign(img.cloneNode(), { alt: "" }));
-      tab.firstChild.insertAdjacentHTML("beforeend", `<span class="title"></span>`);
-      tab.querySelector(".title").textContent = title;
-      tab.onclick = () => this.select(i);
-      stage.append(tab);
+      const bubble = document.createElement("button");
+      bubble.className = "bubble";
+      bubble.lang = "de";
+      bubble.style.setProperty("--i", i);
+      bubble.style.setProperty("--slot", i);
+      bubble.innerHTML = `<span class="float"></span>`;
+      if (img) bubble.firstChild.append(Object.assign(img.cloneNode(), { alt: "" }));
+      bubble.firstChild.insertAdjacentHTML("beforeend", `<span class="title"></span>`);
+      bubble.querySelector(".title").textContent = article.querySelector("h3")?.textContent ?? "";
+      bubble.onclick = () => this.select(i);
+      stage.append(bubble);
 
       const section = document.createElement("section");
-      section.id = `panel-${i}`;
-      section.role = "tabpanel";
-      section.setAttribute("aria-labelledby", tab.id);
-      section.append(...[...article.children].filter((el) => el.tagName !== "IMG").map((el) => el.cloneNode(true)));
+      section.append(...[...article.children].filter((el) => el !== img).map((el) => el.cloneNode(true)));
       panel.append(section);
-      return tab;
+      return bubble;
     });
 
-    stage.onkeydown = (e) => {
-      const n = this.tabs.length;
-      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-      const to = step ? (this.current + step + n) % n : { Home: 0, End: n - 1 }[e.key];
-      if (to === undefined) return;
-      e.preventDefault();
-      this.select(to);
-      this.tabs[to].focus();
-    };
+    stage.onkeydown = (e) => e.key === "Escape" && this.select(0);
+    new IntersectionObserver(([entry], io) => {
+      if (!entry.isIntersecting) return;
+      stage.classList.add("in");
+      io.disconnect();
+    }).observe(stage);
     this.select(0);
   }
 
   select(i) {
-    const prev = this.tabs[this.current];
-    const next = this.tabs[i];
+    const prev = this.bubbles[this.current];
+    const next = this.bubbles[i];
     if (prev && prev !== next) prev.style.setProperty("--slot", next.style.getPropertyValue("--slot"));
     this.current = i;
-    this.tabs.forEach((tab, j) => {
-      tab.setAttribute("aria-selected", j === i);
-      tab.tabIndex = j === i ? 0 : -1;
-    });
+    this.bubbles.forEach((bubble, j) => bubble.setAttribute("aria-current", j === i));
     this.shadowRoot.querySelectorAll("section").forEach((s, j) => s.classList.toggle("on", j === i));
   }
 }
