@@ -25,15 +25,16 @@ const css = `
   aspect-ratio: 1;
   width: 100%;
   max-width: 560px;
+  padding: 4%;
   margin-inline: auto;
 }
 .bubble {
   --r: 36.5cqi;
-  --a: calc(var(--slot) * 60deg - 150deg);
+  --a: calc((var(--slot) - 1) * 360deg / var(--n) - 90deg);
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 40%;
+  width: 40cqi;
   aspect-ratio: 1;
   translate: calc(-50% + cos(var(--a)) * var(--r)) calc(-50% + sin(var(--a)) * var(--r));
   scale: .66;
@@ -46,9 +47,8 @@ const css = `
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.bubble:hover { scale: .71; }
 .bubble[aria-current="true"] { --r: 0cqi; scale: 1; z-index: 1; cursor: default; }
-.bubble:focus-visible { outline: none; }
+.bubble:focus-visible { outline: 2px solid transparent; }
 .bubble:focus-visible .float { box-shadow: 0 0 0 .5cqi #fff, 0 0 0 1.4cqi var(--teal); }
 
 .float {
@@ -75,7 +75,10 @@ img {
   object-fit: cover;
   transition: scale .8s var(--ease);
 }
-.bubble:hover img { scale: 1.08; }
+@media (hover: hover) {
+  .bubble:not([aria-current="true"]):hover { scale: .71; }
+  .bubble:hover img { scale: 1.08; }
+}
 img + .title::before {
   content: "";
   position: absolute;
@@ -92,7 +95,7 @@ img + .title::before {
   height: 100%;
   padding: 0 7%;
   color: #fff;
-  font: 700 max(18px, 5.4cqi)/1.05 var(--title-font);
+  font: 700 max(19px, 5.4cqi)/1.05 var(--title-font);
   text-align: center;
   transition: opacity .5s;
 }
@@ -142,23 +145,27 @@ class RdcLeitbild extends HTMLElement {
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `<style>${css}</style><div class="wrap"><div class="stage"></div><div class="panel" aria-live="polite"></div></div>`;
     const [stage, panel] = root.querySelector(".wrap").children;
+    stage.style.setProperty("--n", articles.length - 1);
 
     this.bubbles = articles.map((article, i) => {
       const img = article.querySelector("img");
       const bubble = document.createElement("button");
       bubble.className = "bubble";
-      bubble.lang = "de";
       bubble.style.setProperty("--i", i);
       bubble.style.setProperty("--slot", i);
-      bubble.innerHTML = `<span class="float"></span>`;
-      if (img) bubble.firstChild.append(Object.assign(img.cloneNode(), { alt: "" }));
-      bubble.firstChild.insertAdjacentHTML("beforeend", `<span class="title"></span>`);
+      bubble.innerHTML = `<span class="float"><span class="title"></span></span>`;
+      if (img) bubble.firstChild.prepend(Object.assign(img.cloneNode(), { alt: "" }));
       bubble.querySelector(".title").textContent = article.querySelector("h3")?.textContent ?? "";
-      bubble.onclick = () => this.select(i);
+      bubble.onclick = () => {
+        this.select(i);
+        if (panel.offsetTop >= stage.offsetTop + stage.offsetHeight) panel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      };
       stage.append(bubble);
 
       const section = document.createElement("section");
-      section.append(...[...article.children].filter((el) => el !== img).map((el) => el.cloneNode(true)));
+      const copy = article.cloneNode(true);
+      copy.querySelectorAll("img").forEach((el) => el.remove());
+      section.append(...copy.children);
       panel.append(section);
       return bubble;
     });

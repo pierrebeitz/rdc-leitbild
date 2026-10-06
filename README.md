@@ -10,7 +10,10 @@ No build step. `rdc-leitbild.js` is the whole component.
 
 ## Embed (WordPress)
 
-Load `rdc-leitbild.js` as a module script on the page, then put the content in a WPBakery "Raw HTML" block:
+1. Build the plugin zip: `cd .. && zip rdc-leitbild.zip rdc-leitbild/rdc-leitbild.php rdc-leitbild/rdc-leitbild.js`
+2. WP admin → Plugins → Upload → activate "RDC Leitbild"
+3. Upload the photos to the media library (square, ~480px)
+4. Put the content in a WPBakery "Raw HTML" block:
 
 ```html
 <rdc-leitbild>
@@ -30,5 +33,5 @@ Load `rdc-leitbild.js` as a module script on the page, then put the content in a
 
 - First `<article>` starts in the center.
 - `<h3>` = bubble title. Long words: add `&shy;` where they may break.
-- Focal point: `style="object-position: 40% 50%"` on the `<img>`.
-- Without JS the articles render as plain text + images.
+- Non-square photo? Set the focal point: `style="object-position: 40% 50%"` on the `<img>`.
+- Without JS the articles render as plain text (images hidden by the plugin).
